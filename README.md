@@ -1,5 +1,7 @@
 # Maze Generator/Viewer/Solver
- This is a python based package used for generating mazes, viewing them, and solving them.
+ This is a python based maze simulation project intended for generating mazes, viewing them, and solving them.
+ Future updates expected to include dynamic functionalities such as maze design by using mouse and applying 
+ different types of path-searching algorithms.
 
 Usage:
 
