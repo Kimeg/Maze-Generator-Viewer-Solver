@@ -35,15 +35,16 @@ def main():
     except:
         nCpu = 1
 
-    ''' list of mazes '''
-    mazes = [Maze(start, i+1) for i in range(nMaze)]
-
     ''' output directory for generated mazes '''
     try:
         os.mkdir(OUTPUT_DIR)
     except Exception as e:
         print(e)
         pass
+
+    ''' list of mazes '''
+    nExist = len(os.listdir(OUTPUT_DIR))
+    mazes = [Maze(start, i+1) for i in range(nExist, nMaze+nExist)]
 
     ''' Generate desired number of mazes in parallel'''
     pool = mp.Pool(processes=nCpu)

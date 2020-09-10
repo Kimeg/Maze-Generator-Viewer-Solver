@@ -2,7 +2,9 @@ from settings import *
 import pygame as pg
 import numpy as np
 import random
+import pickle
 import time
+import os
 
 pg.init()
 CLOCK = pg.time.Clock()
@@ -11,7 +13,7 @@ SCREEN = pg.display.set_mode((WIDTH, HEIGHT))
 class Maze:
     def __init__(self, start, index):
         self.start = start
-        self.end = Cell(HN-1, VN-1, HN*VN)
+        self.end = None 
         self.id = index
         self.cur = start
         self.q = [self.cur]
@@ -19,24 +21,84 @@ class Maze:
         self.openSet = []
         self.cameFrom = {}
         self.reversePath = []
+        self.selected = []
+        
+        self.HN = HN
+        self.VN = VN
+        self.HSTEPSIZE = HSTEPSIZE 
+        self.VSTEPSIZE = VSTEPSIZE 
+        self.HOFFSET = HOFFSET
+        self.VOFFSET = VOFFSET
+
         self.fillMaze()
 
     def __repr__(self):
         return f'{self.cur.pos}'
 
+    def openAll(self):
+        for cell in self.cells.values():
+            cell.openAll()
+        return
+    
+    def mapCoords(self, tup):
+        x, y = tup
+        return (int((x-self.HOFFSET)/self.HSTEPSIZE),int((y-self.VOFFSET)/self.VSTEPSIZE))
+
+    def design(self):
+        running = True 
+        count = 0 
+        while running:
+            count+=1
+            for event in pg.event.get():
+                if event==pg.QUIT:
+                    running = False
+                    break
+                if event==pg.MOUSEBUTTONDOWN:   
+                    print('btn')
+
+            if pg.mouse.get_pressed()[0]:
+                pos = self.mapCoords(pg.mouse.get_pos())
+                cell = self.cells[pos]
+                if cell.all_open: 
+                    self.cells[pos].closeAll()
+                    self.selected.append(self.cells[pos].id)
+                else:
+                    print('already closed')
+
+            if pg.mouse.get_pressed()[2]:
+                pos = self.mapCoords(pg.mouse.get_pos())
+                cell = self.cells[pos]
+                if cell.all_open: 
+                    print('already open')
+                else:
+                    self.cells[pos].openAll()
+                    self.selected.remove(self.cells[pos].id)
+
+            if pg.mouse.get_pressed()[1]:
+                break
+
+            CLOCK.tick(FPS)
+            self.display()
+            pg.display.flip()
+        pg.quit() 
+        with open(os.path.join(OUTPUT_DIR, f'maze_{self.id}.pkl'), 'wb') as output: 
+            pickle.dump(self, output, pickle.HIGHEST_PROTOCOL)
+        print(f'\nA new maze with ID : {self.id} has been created.\n')
+        return
+
     def fillMaze(self):
         self.cells = {}
         self.cid = {}
         count = 0
-        for i in range(HN):
-            for j in range(VN):
+        for i in range(self.HN):
+            for j in range(self.VN):
                 count+=1
                 self.cells[(i,j)] = Cell(i, j, count)
                 self.cid[count] = self.cells[(i,j)]
         return
 
     def isValid(self, pos):
-        return pos[0]>=0 and pos[0]<HN and pos[1]>=0 and pos[1]<VN
+        return pos[0]>=0 and pos[0]<self.HN and pos[1]>=0 and pos[1]<self.VN
 
     def genPath(self):
         dirs = list(DIRS.keys())
@@ -82,11 +144,14 @@ class Maze:
         return
 
     def searchNeighbors(self):
+        dirs = list(DIRS.keys())
+        random.shuffle(dirs)
         self.neighbors = []
-        for k,v in DIRS.items():
+        for k in dirs:
+            v = DIRS[k]
             neighbor = Cell(self.cur.x+v[0], self.cur.y+v[1], 0)
 
-            if neighbor.x < 0 or neighbor.x >= HN or neighbor.y < 0 or neighbor.y >= VN:
+            if neighbor.x < 0 or neighbor.x >= self.HN or neighbor.y < 0 or neighbor.y >= self.VN:
                 continue
             cell = self.cells[neighbor.pos]
 
@@ -98,20 +163,42 @@ class Maze:
                 continue
             elif k=='down' and cell.up:
                 continue
+            elif k=='ul':
+                if not cell.all_open:
+                    continue
+                n1 = self.cells[(cell.x+1, cell.y)]
+                n2 = self.cells[(cell.x, cell.y+1)]
+                if n1.down and n2.right:
+                    continue
+            elif k=='ur':
+                if not cell.all_open:
+                    continue
+                n1 = self.cells[(cell.x-1, cell.y)]
+                n2 = self.cells[(cell.x, cell.y+1)]
+                if n1.down and n2.left:
+                    continue
+            elif k=='ll':
+                if not cell.all_open:
+                    continue
+                n1 = self.cells[(cell.x+1, cell.y)]
+                n2 = self.cells[(cell.x, cell.y-1)]
+                if n1.up and n2.right:
+                    continue                                
+            elif k=='lr':
+                if not cell.all_open:
+                    continue
+                n1 = self.cells[(cell.x-1, cell.y)]
+                n2 = self.cells[(cell.x, cell.y-1)]
+                if n1.up and n2.left:
+                    continue
 
             self.neighbors.append(cell)
         return
 
-    def backtrack(self):
-        prev = self.cur.id
-        while prev in self.cameFrom:
-            prev = self.cameFrom[prev]
-            self.reversePath.append(prev)
-            self.display()
-        return
-
-    def solve(self):
+    def solve(self, start, end):
         pg.display.set_caption(f'Maze {self.id}')
+        self.start = start.pos
+        self.end = end
 
         self.cur = self.cells[self.start]
         self.openSet = [self.cur.id]
@@ -128,6 +215,8 @@ class Maze:
             self.display()
             self.minF()
 
+            if pg.mouse.get_pressed()[1]:
+                return 
             if self.cur == self.end:
                 self.backtrack()
                 break
@@ -144,14 +233,22 @@ class Maze:
 
                     if not neighbor.id in self.openSet:
                         self.openSet.append(neighbor.id)
-        time.sleep(3)
+        time.sleep(2)
+        return
+
+    def backtrack(self):
+        prev = self.cur.id
+        while prev in self.cameFrom:
+            prev = self.cameFrom[prev]
+            self.reversePath.append(prev)
+            self.display()
         return
 
     def display(self):
         SCREEN.fill(BLACK)
         for cell in self.cells.values():
             c = GREEN
-            if cell.id in self.openSet or cell.visited:
+            if cell.id in self.openSet or cell.visited or cell.id in self.selected:
                 c = YELLOW
             if cell.backtracked:
                 c = GREEN
@@ -164,35 +261,46 @@ class Maze:
                 if self.cur==(cell.x, cell.y):
                     c = RED
 
-            pg.draw.rect(SCREEN, c, (HSTEPSIZE*cell.x + HOFFSET, VSTEPSIZE*cell.y + VOFFSET, HSTEPSIZE, VSTEPSIZE))
+            pg.draw.rect(SCREEN, c, (self.HSTEPSIZE*cell.x + self.HOFFSET, self.VSTEPSIZE*cell.y + self.VOFFSET, self.HSTEPSIZE, self.VSTEPSIZE))
 
             if cell.left:
-                pg.draw.line(SCREEN, PURPLE, (HSTEPSIZE*cell.x + HOFFSET, VSTEPSIZE*cell.y + VOFFSET), (HSTEPSIZE*cell.x + HOFFSET, VSTEPSIZE*(1+cell.y) + VOFFSET), LINEWIDTH)
+                pg.draw.line(SCREEN, PURPLE, (self.HSTEPSIZE*cell.x + self.HOFFSET, self.VSTEPSIZE*cell.y + self.VOFFSET), (self.HSTEPSIZE*cell.x + self.HOFFSET, self.VSTEPSIZE*(1+cell.y) + self.VOFFSET), LINEWIDTH)
             if cell.right:
-                pg.draw.line(SCREEN, PURPLE, (HSTEPSIZE*(1+cell.x) + HOFFSET, VSTEPSIZE*cell.y + VOFFSET), (HSTEPSIZE*(1+cell.x) + HOFFSET, VSTEPSIZE*(1+cell.y) + VOFFSET), LINEWIDTH)
+                pg.draw.line(SCREEN, PURPLE, (self.HSTEPSIZE*(1+cell.x) + self.HOFFSET, self.VSTEPSIZE*cell.y + self.VOFFSET), (self.HSTEPSIZE*(1+cell.x) + self.HOFFSET, self.VSTEPSIZE*(1+cell.y) + self.VOFFSET), LINEWIDTH)
             if cell.up:
-                pg.draw.line(SCREEN, PURPLE, (HSTEPSIZE*cell.x + HOFFSET, VSTEPSIZE*cell.y + VOFFSET), (HSTEPSIZE*(1+cell.x) + HOFFSET, VSTEPSIZE*cell.y + VOFFSET), LINEWIDTH)
+                pg.draw.line(SCREEN, PURPLE, (self.HSTEPSIZE*cell.x + self.HOFFSET, self.VSTEPSIZE*cell.y + self.VOFFSET), (self.HSTEPSIZE*(1+cell.x) + self.HOFFSET, self.VSTEPSIZE*cell.y + self.VOFFSET), LINEWIDTH)
             if cell.down:
-                pg.draw.line(SCREEN, PURPLE, (HSTEPSIZE*cell.x + HOFFSET, VSTEPSIZE*(1+cell.y) + VOFFSET), (HSTEPSIZE*(1+cell.x) + HOFFSET, VSTEPSIZE*(1+cell.y) + VOFFSET), LINEWIDTH)
+                pg.draw.line(SCREEN, PURPLE, (self.HSTEPSIZE*cell.x + self.HOFFSET, self.VSTEPSIZE*(1+cell.y) + self.VOFFSET), (self.HSTEPSIZE*(1+cell.x) + self.HOFFSET, self.VSTEPSIZE*(1+cell.y) + self.VOFFSET), LINEWIDTH)
 
         CLOCK.tick(FPS)
         pg.display.flip()
         return
 
 class Cell:
-    def __init__(self, x, y, index):
+    def __init__(self, x, y, index=None):
         self.x = x
         self.y = y
         self.id =index 
 
         self.pos = (x,y)
-        self.left = True 
-        self.right = True 
-        self.up = True 
-        self.down = True 
+        self.closeAll()
 
         self.visited = False
         self.backtracked = False
 
+    def openAll(self):
+        self.left = False 
+        self.right = False 
+        self.up = False 
+        self.down = False 
+        self.all_open = True 
+
+    def closeAll(self):
+        self.left = True 
+        self.right = True 
+        self.up = True 
+        self.down = True 
+        self.all_open = False 
+
     def __eq__(self, cell):
-        return self.id==cell.id
+        return self.pos==cell.pos

@@ -1,6 +1,6 @@
 ''' maze block counts for horizontal and vertical dimensions'''
-HN = 40 
-VN = 40
+HN = 25 
+VN = 25 
 
 ''' screen width and height '''
 WIDTH = 600
@@ -20,7 +20,7 @@ VSTEPSIZE = int(VSIZE/VN)
 LINEWIDTH = 1
 
 ''' frames per second setting for pygame rendering '''
-FPS = 120
+FPS = 60
 
 ''' color settings '''
 WHITE = (255,255,255)
@@ -33,7 +33,8 @@ BLUE = (0,0,180)
 PURPLE = (200,0,200)
 
 ''' dict used for searching neighbors or available paths by all directions '''
-DIRS = {'down':(0,1), 'up':(0,-1), 'right':(1,0), 'left':(-1,0)}
+DIRS = {'down':(0,1), 'up':(0,-1), 'right':(1,0), 'left':(-1,0), 'ul':(-1,-1), 'ur':(1,-1), 'll':(-1,1), 'lr':(1,1)}
+#DIRS = {'down':(0,1), 'up':(0,-1), 'right':(1,0), 'left':(-1,0)}
 
 ''' output directory for generating mazes '''
 OUTPUT_DIR = './mazes'

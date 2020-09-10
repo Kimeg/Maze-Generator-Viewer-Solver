@@ -18,8 +18,12 @@ def main():
 		print(e)
 		return
 
+	''' set start and goal for the maze '''
+	start = Cell(0, 0)
+	goal = Cell(maze.HN-1, maze.VN-1)
+
 	''' display the process of solving the maze '''
-	maze.solve()
+	maze.solve(start, goal)
 	return
 
 if __name__ == '__main__':
