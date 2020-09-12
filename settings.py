@@ -35,6 +35,7 @@ PURPLE = (200,0,200)
 ''' dict used for searching neighbors or available paths by all directions '''
 DIRS = {'down':(0,1), 'up':(0,-1), 'right':(1,0), 'left':(-1,0), 'ul':(-1,-1), 'ur':(1,-1), 'll':(-1,1), 'lr':(1,1)}
 #DIRS = {'down':(0,1), 'up':(0,-1), 'right':(1,0), 'left':(-1,0)}
+DIAG = ['ul', 'ur', 'll', 'lr']
 
 ''' output directory for generating mazes '''
 OUTPUT_DIR = './mazes'

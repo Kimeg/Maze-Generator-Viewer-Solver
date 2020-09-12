@@ -106,6 +106,8 @@ class Maze:
 
         found = False
         for d in dirs:
+            if d in DIAG:
+                continue 
             _from = (self.cur[0], self.cur[1])
             _to = (self.cur[0]+DIRS[d][0], self.cur[1]+DIRS[d][1])
 
