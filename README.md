@@ -9,6 +9,8 @@
 
  Future updates expected to include optimizations such as GUI implementations and applying different types of path-searching algorithms.
 
+![alt text](solve.png)
+
 # Usage:
 
 [Generate Maze] - uses A-star path-finding algorithm to generate an arbitrary maze.
